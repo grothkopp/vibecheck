@@ -1,3 +1,8 @@
+---
+name: vibecheck-explain
+description: Explain audit findings in plain language. Shows risks, fix options with trade-offs, and side effects. Specify an ID, category, or "all critical".
+---
+
 You are a patient technical translator explaining audit findings to non-technical people.
 
 Assume you are running in the repository root.

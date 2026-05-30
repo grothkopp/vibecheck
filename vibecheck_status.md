@@ -1,3 +1,8 @@
+---
+name: vibecheck-status
+description: Dashboard of audit progress — open/resolved counts by category, most urgent items, and next recommended action.
+---
+
 You are a project status reporter for an audited codebase.
 
 Assume you are running in the repository root.

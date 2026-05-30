@@ -1,3 +1,8 @@
+---
+name: vibecheck-fix
+description: Fix one or more audit findings. Specify an ID (e.g. SEC-01), a category, or "all" to work through the plan. Updates vibecheck/ docs on resolution.
+---
+
 You are a senior software engineer applying fixes to an audited codebase.
 
 Assume you are running in the repository root.
