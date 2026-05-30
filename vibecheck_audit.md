@@ -392,3 +392,115 @@ Success criteria:
 - The root cause is fixed, not only the symptom.
 - The relevant behavior is validated.
 - The audit documents are updated to reflect the fix.
+```
+
+## Systemic findings: Agent instruction guardrails
+
+When a finding reveals a **systemic or structural problem** — not just a one-time bug, but a pattern that will recur unless future development follows specific rules — the fix must also include an update to the project's agent instruction file.
+
+### When to propose agent instruction updates
+
+Propose adding rules to `CLAUDE.md` or `AGENTS.md` (whichever exists; if neither exists, propose creating `CLAUDE.md`) when you discover:
+
+| Pattern | Example instruction to add |
+|---------|---------------------------|
+| No tests exist, or only trivial/few tests | "Always write tests for new code. Run the test suite before committing and ensure all tests pass." |
+| Architecture is violated in parts of the code | Summary of the intended architecture + "Follow this architecture for all new code. Do not introduce direct dependencies between [X] and [Y]." |
+| No input validation or inconsistent validation | "Validate all user inputs at the API boundary. Never trust client-side validation alone." |
+| Missing or inconsistent error handling | "Handle errors explicitly. Never swallow errors silently. Log errors with context." |
+| Security patterns not followed (e.g. missing auth checks) | "Every new API route must include authentication and authorization checks. Reference existing middleware: [path]." |
+| No type safety or inconsistent typing | "Use strict TypeScript types. Avoid `any`. Define interfaces for all API request/response shapes." |
+| Database queries without tenant scoping | "Every database query must include tenant_id filtering. Never query without scoping to the current user's organization." |
+| No migration discipline | "Every schema change requires a migration file. Never modify the database schema directly." |
+| Logging/observability not considered | "Add structured logging for all state-changing operations. Include user_id, action, and resource_id." |
+| Deployment/environment confusion | "Never hardcode environment-specific values. Use environment variables for all configuration." |
+
+### How to include it in findings
+
+When a finding qualifies as systemic, add a new section to that finding:
+
+### Agent Instruction Update
+
+```markdown
+Add to `CLAUDE.md` (or `AGENTS.md`):
+
+## [Section title]
+[Concise instruction that prevents this class of problem from recurring]
+[Brief rationale so future agents understand WHY]
+```
+
+### Rules for writing agent instructions
+
+1. **Be specific and actionable** — "Write tests" is too vague. "Write unit tests for all new utility functions and integration tests for all new API endpoints. Run `npm test` before committing." is good.
+2. **Include the WHY** — A one-line explanation helps agents prioritize. "Tests are critical because this project was built without them and has had regressions."
+3. **Reference existing patterns** — If good examples exist in the codebase, point to them. "Follow the pattern in `src/api/users.ts` for auth middleware usage."
+4. **Keep it concise** — Agent instruction files should be scannable. Each rule should be 1-3 sentences max.
+5. **Group logically** — Propose a section heading that groups related rules (e.g. "## Testing requirements", "## Architecture rules", "## Security patterns").
+6. **Don't duplicate what's obvious** — Only add instructions for things that are clearly being violated or missing. Don't restate generic best practices unless the codebase specifically needs them.
+
+### What to check first
+
+Before proposing agent instructions, check:
+- Does `CLAUDE.md` already exist? Read it. Don't duplicate existing rules.
+- Does `AGENTS.md` exist? Some projects use this instead.
+- Does `.cursorrules`, `.windsurfrules`, or similar exist? Note it in the finding but still propose `CLAUDE.md` updates for agent-agnostic coverage.
+- Are there existing conventions documented anywhere (README, CONTRIBUTING.md, etc.)? Reference them rather than restating.
+
+### Fix Prompt extension for systemic findings
+
+When a finding includes an Agent Instruction Update, the Fix Prompt should include:
+
+```text
+Additionally:
+- Check if `CLAUDE.md` (or `AGENTS.md`) exists in the project root.
+- If it exists, append the new instruction under the appropriate section heading.
+- If it does not exist, create `CLAUDE.md` with a brief project header and the new instruction section.
+- Do not remove or modify existing instructions unless they directly contradict the new rule.
+```
+
+### Example: No tests found
+
+If the audit discovers that a project has zero or near-zero test coverage:
+
+**In the finding (e.g. `vibecheck/tests.md`):**
+
+### Agent Instruction Update
+
+```markdown
+Add to `CLAUDE.md`:
+
+## Testing requirements
+- Write unit tests for all new functions and modules.
+- Write integration tests for all new API endpoints.
+- Run the test suite (`npm test` / `pytest` / relevant command) before considering any task complete.
+- If you modify existing code, ensure existing tests still pass. Add tests for the modified behavior if none exist.
+- Test files live in `[detected test directory or propose one]`.
+
+Why: This project was built without tests and has no safety net against regressions. Every new piece of code must be tested to prevent the deficit from growing.
+```
+
+### Example: Architecture violations
+
+If the audit discovers that the intended architecture (e.g. layered, hexagonal, or module-based) is violated in multiple places:
+
+**In the finding (e.g. `vibecheck/architecture.md`):**
+
+### Agent Instruction Update
+
+```markdown
+Add to `CLAUDE.md`:
+
+## Architecture
+This project follows [detected pattern, e.g. "a layered architecture"]:
+- `src/api/` — HTTP handlers and request validation only. No business logic.
+- `src/services/` — Business logic. No direct database access.
+- `src/repositories/` — Database queries only. No business logic.
+- `src/shared/` — Utilities and types shared across layers.
+
+Rules:
+- API handlers must not import from `repositories/` directly — go through `services/`.
+- Services must not import from `api/` — they receive plain data, not request objects.
+- New features must follow this layering. If unsure where code belongs, ask.
+
+Why: Parts of this codebase bypass the intended layers, creating tight coupling and making changes risky. Following the architecture prevents further drift.
+```
